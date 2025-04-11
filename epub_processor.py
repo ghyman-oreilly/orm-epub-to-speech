@@ -1,4 +1,3 @@
-import os
 import ebooklib
 from ebooklib import epub
 from bs4 import BeautifulSoup
@@ -44,8 +43,31 @@ def extract_epub_to_markdown(epub_path, output_file):
                 # Parse HTML with BeautifulSoup
                 soup = BeautifulSoup(html_content, 'html.parser')
 
+                # section classes to retain
+                chapter_level_section_classes = ['afterword', 'appendix', 'chapter', 'colophon','conclusion', 'foreword', 'introduction', 'preface', 'titlepage']
+
+                # skip any chapter-level sections that we don't want to keep
+                try:
+                    if not soup.find("section").get('data-type') in chapter_level_section_classes:
+                        continue
+                except:
+                    continue
+
+                first_h1_found = False
+
+                # promote all headings but the first (chapter title)
+                for tag in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
+                    level = int(tag.name[1])
+
+                    if tag.name == "h1" and not first_h1_found:
+                        first_h1_found = True
+                        continue  # Leave the first h1 untouched
+
+                    if level < 6:
+                        tag.name = f"h{level + 1}"  # Promote to the next level
+
                 # Remove unwanted elements
-                for element in soup(['script', 'style', 'table', 'figure', 'figcaption', 'code', 'pre']):
+                for element in soup(['script', 'style', 'table', 'figure', 'figcaption', 'pre']):
                     element.decompose()
 
                 # Remove formatting tags but keep their content
@@ -88,32 +110,3 @@ def extract_epub_to_markdown(epub_path, output_file):
 
     except Exception as e:
         return f"Error processing EPUB: {str(e)}"
-
-
-def clean_html(html_content):
-    """
-    Clean HTML content and extract only basic text without formatting.
-
-    Args:
-        html_content: HTML content as string
-
-    Returns:
-        str: Cleaned text without formatting
-    """
-    soup = BeautifulSoup(html_content, 'html.parser')
-
-    # Remove unwanted elements
-    for element in soup(['script', 'style', 'table', 'figure', 'figcaption', 'code', 'pre', 'blockquote']):
-        element.decompose()
-
-    # Remove formatting tags but keep their content
-    for tag in soup.find_all(['strong', 'b', 'em', 'i', 'code']):
-        tag.replace_with(tag.get_text())
-
-    # Get just the text
-    text = soup.get_text()
-
-    # Clean up whitespace
-    text = re.sub(r'\s+', ' ', text).strip()
-
-    return text

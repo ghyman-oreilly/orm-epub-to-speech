@@ -1,6 +1,8 @@
 # EPUB to Speech Converter
 
-This tool allows you to extract content from EPUB files and convert it to speech using OpenAI's Text-to-Speech API.
+Modified script based on Chris Bremseth's awesome [epub-to-speech script](https://github.com/cbremseth/epub-to-speech). 
+
+This tool allows you to extract content from EPUB files and convert it to speech using OpenAI's Text-to-Speech API. This version has some modifications that make it suitable for the ORM/HTMLBook use case.
 
 ## Features
 
@@ -8,7 +10,9 @@ This tool allows you to extract content from EPUB files and convert it to speech
 - Convert Markdown content to speech files using OpenAI's TTS API
 - Process EPUBs to speech in a single command
 - Customizable voice selection
-- Support for large files by splitting content into manageable sections
+- Support for large files by chunking them and then reassembling the resulting audio
+- Suitable for HTMLBook specifically: Only chapter-level sections with specific data-types are retained ('chapter', 'preface', etc.)
+- Headings after the first in a chapter are promoted, to keep chapter content together
 
 ## Installation
 

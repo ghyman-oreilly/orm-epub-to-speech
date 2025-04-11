@@ -1,3 +1,5 @@
 .env
 /content
 __pycache__
+/dev
+/audio_files

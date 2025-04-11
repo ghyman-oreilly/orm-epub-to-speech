@@ -1,8 +1,10 @@
 import click
 import os
+import shutil
+import time
+from audio_concatenator import merge_audio_files
 from epub_processor import extract_epub_to_markdown
 from speech_generator import convert_markdown_to_speech
-
 
 @click.group()
 def cli():
@@ -34,10 +36,22 @@ def speak(markdown_file, output_dir, voice):
         os.makedirs(output_dir)
         click.echo(f"Created output directory: {output_dir}")
 
+    # Create temporary directory
+    temp_dir = os.path.join(output_dir, f"temp_{int(time.time())}")
+    os.makedirs(temp_dir, exist_ok=True)
+
     click.echo(
         f"Converting {markdown_file} to speech using voice '{voice}'...")
-    result = convert_markdown_to_speech(markdown_file, output_dir, voice)
-    click.echo(f"Speech conversion complete: {result}")
+    chunked_audio = convert_markdown_to_speech(markdown_file, temp_dir, voice)
+
+    merged_audio = merge_audio_files(chunked_audio, output_dir)
+
+    shutil.rmtree(temp_dir)
+
+    click.echo(f"Audio files saved:")
+    for filepath in merged_audio: 
+        click.echo(filepath)
+    click.echo(f"Speech conversion complete.")
 
 
 @cli.command()
@@ -56,12 +70,24 @@ def process(epub_file, output_dir, voice, keep_markdown):
     extract_result = extract_epub_to_markdown(epub_file, md_filename)
     click.echo(f"Extraction complete: {extract_result}")
 
-    # Convert markdown to speech
+    # Create output directory
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    speech_result = convert_markdown_to_speech(md_filename, output_dir, voice)
-    click.echo(f"Speech conversion complete: {speech_result}")
+    # Create temporary directory
+    temp_dir = os.path.join(output_dir, f"temp_{int(time.time())}")
+    os.makedirs(temp_dir, exist_ok=True)
+
+    chunked_audio = convert_markdown_to_speech(md_filename, temp_dir, voice)
+
+    merged_audio = merge_audio_files(chunked_audio, output_dir)
+
+    shutil.rmtree(temp_dir)
+
+    click.echo(f"Audio files saved:")
+    for filepath in merged_audio: 
+        click.echo(filepath)
+    click.echo(f"Speech conversion complete.")
 
     # Remove markdown file if not keeping it
     if not keep_markdown and os.path.exists(md_filename):

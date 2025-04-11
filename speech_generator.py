@@ -21,13 +21,11 @@ def convert_markdown_to_speech(markdown_file, output_dir, voice='alloy'):
         voice: Voice to use (alloy, echo, fable, onyx, nova, shimmer)
 
     Returns:
-        str: Output directory path
+        List of lists of tuples:
+        - Each nested list represents a section
+        - Each tuple is as: (chunk_index, file_basename, output_filename)
     """
     try:
-        # Ensure output directory exists
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-
         # Read markdown file
         with open(markdown_file, 'r', encoding='utf-8') as f:
             markdown_content = f.read()
@@ -38,58 +36,64 @@ def convert_markdown_to_speech(markdown_file, output_dir, voice='alloy'):
         # Initialize OpenAI client
         client = OpenAI()
 
-        # Base filename from original markdown
-        base_filename = os.path.splitext(os.path.basename(markdown_file))[0]
+        output = []
 
         # Process each section
-        for i, (title, content) in enumerate(sections):
+        for section_ix, (title, content) in enumerate(sections):
+            section_audio = []
+            
             # Clean the filename
             safe_title = re.sub(r'[^\w\s-]', '', title.lower())
             safe_title = re.sub(r'[\s]+', '_', safe_title)
 
-            # Create a filename for this section
-            filename = f"{i+1:02d}_{safe_title[:30]}.mp3"
-            output_path = os.path.join(output_dir, filename)
+            file_basename = f"{section_ix+1:02d}_{safe_title[:30]}"
+            
+            # chunk the content, to stay below char limit
+            chunked_content = split_content_into_chunks(content)
 
-            # Skip if file already exists
-            if os.path.exists(output_path):
-                print(f"Skipping existing file: {output_path}")
-                continue
+            for chunk_ix, chunk in enumerate(chunked_content):
+                
+                # Generate speech
+                response = client.audio.speech.create(
+                    model="tts-1",
+                    voice=voice,
+                    input=chunk
+                )
 
-            # Limit content length
-            if len(content) > 4096:
-                print(
-                    f"Warning: Section {i+1} is too long, truncating to 4096 characters")
-                content = content[:4096]
+                # Create a filename for this chunk
+                filename = f"{(
+                    f'{file_basename}.mp3' if len(chunked_content) == 1 
+                    else f'{file_basename}_pt{chunk_ix:02}.mp3'
+                )}"
+                output_path = os.path.join(output_dir, filename)
 
-            # Generate speech
-            response = client.audio.speech.create(
-                model="tts-1",
-                voice=voice,
-                input=content
-            )
+                # Skip if file already exists
+                if os.path.exists(output_path):
+                    print(f"Skipping existing file: {output_path}")
+                    continue
 
-            # Save to file
-            response.stream_to_file(output_path)
+                # Save to file
+                response.stream_to_file(output_path)
 
-            print(f"Created: {output_path}")
+                section_audio.append((chunk_ix, file_basename, output_path))
 
-            # Sleep to avoid hitting API rate limits
-            time.sleep(1)
+                # Sleep to avoid hitting API rate limits
+                time.sleep(1)
+            
+            output.append(section_audio)
 
-        return output_dir
+        return output
 
     except Exception as e:
         return f"Error converting to speech: {str(e)}"
 
 
-def split_into_sections(markdown_content, max_words=800):
+def split_into_sections(markdown_content):
     """
-    Split markdown content into manageable sections based on headings.
+    Split markdown content into sections based on headings.
 
     Args:
         markdown_content: The markdown content
-        max_words: Maximum words per section
 
     Returns:
         list: List of tuples (section_title, section_content)
@@ -129,17 +133,33 @@ def split_into_sections(markdown_content, max_words=800):
                 break
 
         content = ''.join(content_parts)
-
-        # If content is too long, split it further
-        words = content.split()
-        if len(words) > max_words:
-            # Split content into chunks of max_words
-            chunks = [' '.join(words[i:i+max_words])
-                      for i in range(0, len(words), max_words)]
-            for j, chunk in enumerate(chunks):
-                chunk_title = f"{title} (Part {j+1})"
-                sections.append((chunk_title, chunk))
-        else:
-            sections.append((title, content))
+        sections.append((title, content))
 
     return sections
+
+
+def split_content_into_chunks(content, max_chars=4096):
+    """
+    Chunk string of content to ensure we
+    remain below character limit but retain all content.
+    """
+    sentences = content.split('. ')
+    chunks = []
+    current_chunk = ""
+
+    for i, sentence in enumerate(sentences):
+        # Reattach the ". " (unless it's the very last sentence)
+        if i < len(sentences) - 1:
+            sentence += ". "
+
+        if len(current_chunk) + len(sentence) > max_chars:
+            # Save the current chunk and start a new one
+            chunks.append(current_chunk.strip())
+            current_chunk = sentence
+        else:
+            current_chunk += sentence
+
+    if current_chunk:
+        chunks.append(current_chunk.strip())
+
+    return chunks
