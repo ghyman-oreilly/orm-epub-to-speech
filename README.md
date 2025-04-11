@@ -1,4 +1,4 @@
-# EPUB to Speech Converter
+# ORM EPUB to Speech Converter
 
 Modified script based on Chris Bremseth's awesome [epub-to-speech script](https://github.com/cbremseth/epub-to-speech). 
 
