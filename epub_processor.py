@@ -21,18 +21,8 @@ def extract_epub_to_markdown(epub_path, output_file):
         # Read the EPUB file
         book = epub.read_epub(epub_path, {"ignore_ncx": True})
 
-        # Get book metadata
-        title = book.get_metadata('DC', 'title')
-        creator = book.get_metadata('DC', 'creator')
-
         # Start building markdown content
         markdown_content = []
-
-        # Add book title and author if available
-        if title:
-            markdown_content.append(f"# {title[0][0]}\n")
-        if creator:
-            markdown_content.append(f"By {creator[0][0]}\n")
 
         # Process each document in the EPUB
         for item in book.get_items():
@@ -92,7 +82,7 @@ def extract_epub_to_markdown(epub_path, output_file):
                 markdown_section = md(
                     str(body),
                     heading_style="ATX",
-                    strip=['a', 'img', 'code', 'pre',
+                    strip=['a', 'img', 'pre',
                            'table', 'tr', 'td', 'th', 'blockquote']
                 )
 
