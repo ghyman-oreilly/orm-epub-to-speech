@@ -64,6 +64,7 @@ python main.py speak path/to/file.md --output-dir ./audio_files --voice nova
 Options:
 - `--output-dir`, `-o`: Directory for audio output files (default: ./audio_output)
 - `--voice`, `-v`: Voice to use (options: alloy, echo, fable, onyx, nova, shimmer)
+- `--split-at-subheadings`, `-s`: Split audio files by subheadings (all H1 and H2) instead of the default of chapter-level audio files (H1)
 
 ### 3. Process an EPUB file to speech in one step
 

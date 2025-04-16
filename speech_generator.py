@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def convert_markdown_to_speech(markdown_file, output_dir, voice='alloy', split_at_all_headings=False):
+def convert_markdown_to_speech(markdown_file, output_dir, voice='alloy', split_at_subheadings=False):
     """
     Convert markdown content to speech using OpenAI's Text-to-Speech API.
 
@@ -31,7 +31,7 @@ def convert_markdown_to_speech(markdown_file, output_dir, voice='alloy', split_a
             markdown_content = f.read()
 
         # Split markdown into sections (chapters or major headings)
-        sections = split_into_sections(markdown_content, split_at_all_headings)
+        sections = split_into_sections(markdown_content, split_at_subheadings)
 
         # Initialize OpenAI client
         client = OpenAI()
@@ -88,7 +88,7 @@ def convert_markdown_to_speech(markdown_file, output_dir, voice='alloy', split_a
         return f"Error converting to speech: {str(e)}"
 
 
-def split_into_sections(markdown_content, split_at_all_headings=False):
+def split_into_sections(markdown_content, split_at_subheadings=False):
     """
     Split markdown content into sections based on headings.
 
@@ -103,8 +103,8 @@ def split_into_sections(markdown_content, split_at_all_headings=False):
     soup = BeautifulSoup(html, 'html.parser')
 
     # Find heading elements
-    if split_at_all_headings:
-        headings = soup.find_all(['h1', 'h2', 'h3'])
+    if split_at_subheadings:
+        headings = soup.find_all(['h1', 'h2'])
     else:
         headings = soup.find_all(['h1'])
     
@@ -113,6 +113,18 @@ def split_into_sections(markdown_content, split_at_all_headings=False):
     # If no headings, return the entire content as one section
     if not headings:
         return [("Content", markdown_content)]
+
+    # Add content before the first heading as "Intro"
+    intro_parts = []
+    for element in soup.contents:
+        if element == headings[0]:
+            break
+        if getattr(element, 'name', None) or isinstance(element, str):
+            text = element.get_text() if hasattr(element, 'get_text') else str(element)
+            if text.strip():
+                intro_parts.append(text.strip() + "\n\n")
+    if intro_parts:
+        sections.append(("Intro", ''.join(intro_parts)))
 
     # Process each heading as a section
     for i, heading in enumerate(headings):

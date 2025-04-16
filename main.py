@@ -30,8 +30,8 @@ def extract(epub_file, output):
 @click.argument('markdown_file', type=click.Path(exists=True))
 @click.option('--output-dir', '-o', default='./audio_output', help='Output directory for audio files')
 @click.option('--voice', '-v', default='alloy', help='Voice to use (alloy, echo, fable, onyx, nova, shimmer)')
-@click.option('--split-at-all-headings', '-s', is_flag=True, help='Split audio content at all heading levels. If you do not pass this flag, content is split at H1 (chapter) level only.')
-def speak(markdown_file, output_dir, voice, split_at_all_headings):
+@click.option('--split-at-subheadings', '-s', is_flag=True, help='Split audio content at H1 and H2 heading levels. If you do not pass this flag, content is split at H1 (chapter) level only.')
+def speak(markdown_file, output_dir, voice, split_at_subheadings):
     """Convert markdown content to speech using OpenAI's Text-to-Speech."""
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -43,7 +43,7 @@ def speak(markdown_file, output_dir, voice, split_at_all_headings):
 
     click.echo(
         f"Converting {markdown_file} to speech using voice '{voice}'...")
-    chunked_audio = convert_markdown_to_speech(markdown_file, temp_dir, voice, split_at_all_headings)
+    chunked_audio = convert_markdown_to_speech(markdown_file, temp_dir, voice, split_at_subheadings)
 
     merged_audio = merge_audio_files(chunked_audio, output_dir)
 
@@ -60,7 +60,8 @@ def speak(markdown_file, output_dir, voice, split_at_all_headings):
 @click.option('--output-dir', '-o', default='./audio_output', help='Output directory for audio files')
 @click.option('--voice', '-v', default='alloy', help='Voice to use (alloy, echo, fable, onyx, nova, shimmer)')
 @click.option('--keep-markdown', '-k', is_flag=True, help='Keep the intermediate markdown file')
-def process(epub_file, output_dir, voice, keep_markdown):
+@click.option('--split-at-subheadings', '-s', is_flag=True, help='Split audio content at H1 and H2 heading levels. If you do not pass this flag, content is split at H1 (chapter) level only.')
+def process(epub_file, output_dir, voice, keep_markdown, split_at_subheadings):
     """Process an EPUB file to extract content and convert to speech in one step."""
     # Generate temporary markdown filename
     md_filename = os.path.splitext(os.path.basename(epub_file))[0] + '.md'
@@ -79,7 +80,7 @@ def process(epub_file, output_dir, voice, keep_markdown):
     temp_dir = os.path.join(output_dir, f"temp_{int(time.time())}")
     os.makedirs(temp_dir, exist_ok=True)
 
-    chunked_audio = convert_markdown_to_speech(md_filename, temp_dir, voice)
+    chunked_audio = convert_markdown_to_speech(md_filename, temp_dir, voice, split_at_subheadings)
 
     merged_audio = merge_audio_files(chunked_audio, output_dir)
 
