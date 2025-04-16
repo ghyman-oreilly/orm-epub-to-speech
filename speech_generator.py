@@ -137,10 +137,7 @@ def split_into_sections(markdown_content, split_at_subheadings=False):
         # Get all content until the next heading
         element = heading.next_sibling
         while element and (i == len(headings) - 1 or element != headings[i + 1]):
-            if element.name and element.name not in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
-                content_parts.append(element.get_text() + "\n\n")
-            elif isinstance(element, str) and element.strip():
-                content_parts.append(element + "\n\n")
+            content_parts.append(element.get_text() + "\n\n")
 
             # Move to next element
             if hasattr(element, 'next_sibling'):
