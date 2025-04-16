@@ -28,12 +28,6 @@ def extract_epub_to_markdown(epub_path, output_file):
         # Start building markdown content
         markdown_content = []
 
-        # Add book title and author if available
-        if title:
-            markdown_content.append(f"# {title[0][0]}\n")
-        if creator:
-            markdown_content.append(f"By {creator[0][0]}\n")
-
         # Process each document in the EPUB
         for item in book.get_items():
             if item.get_type() == ebooklib.ITEM_DOCUMENT:
