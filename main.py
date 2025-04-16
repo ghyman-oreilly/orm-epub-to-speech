@@ -30,7 +30,8 @@ def extract(epub_file, output):
 @click.argument('markdown_file', type=click.Path(exists=True))
 @click.option('--output-dir', '-o', default='./audio_output', help='Output directory for audio files')
 @click.option('--voice', '-v', default='alloy', help='Voice to use (alloy, echo, fable, onyx, nova, shimmer)')
-def speak(markdown_file, output_dir, voice):
+@click.option('--split-at-all-headings', '-s', is_flag=True, help='Split audio content at all heading levels. If you do not pass this flag, content is split at H1 (chapter) level only.')
+def speak(markdown_file, output_dir, voice, split_at_all_headings):
     """Convert markdown content to speech using OpenAI's Text-to-Speech."""
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -42,7 +43,7 @@ def speak(markdown_file, output_dir, voice):
 
     click.echo(
         f"Converting {markdown_file} to speech using voice '{voice}'...")
-    chunked_audio = convert_markdown_to_speech(markdown_file, temp_dir, voice)
+    chunked_audio = convert_markdown_to_speech(markdown_file, temp_dir, voice, split_at_all_headings)
 
     merged_audio = merge_audio_files(chunked_audio, output_dir)
 

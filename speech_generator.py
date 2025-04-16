@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def convert_markdown_to_speech(markdown_file, output_dir, voice='alloy'):
+def convert_markdown_to_speech(markdown_file, output_dir, voice='alloy', split_at_all_headings=False):
     """
     Convert markdown content to speech using OpenAI's Text-to-Speech API.
 
@@ -31,7 +31,7 @@ def convert_markdown_to_speech(markdown_file, output_dir, voice='alloy'):
             markdown_content = f.read()
 
         # Split markdown into sections (chapters or major headings)
-        sections = split_into_sections(markdown_content)
+        sections = split_into_sections(markdown_content, split_at_all_headings)
 
         # Initialize OpenAI client
         client = OpenAI()
@@ -88,7 +88,7 @@ def convert_markdown_to_speech(markdown_file, output_dir, voice='alloy'):
         return f"Error converting to speech: {str(e)}"
 
 
-def split_into_sections(markdown_content):
+def split_into_sections(markdown_content, split_at_all_headings=False):
     """
     Split markdown content into sections based on headings.
 
@@ -102,8 +102,12 @@ def split_into_sections(markdown_content):
     html = markdown.markdown(markdown_content)
     soup = BeautifulSoup(html, 'html.parser')
 
-    # Find all heading elements
-    headings = soup.find_all(['h1', 'h2', 'h3'])
+    # Find heading elements
+    if split_at_all_headings:
+        headings = soup.find_all(['h1', 'h2', 'h3'])
+    else:
+        headings = soup.find_all(['h1'])
+    
     sections = []
 
     # If no headings, return the entire content as one section
