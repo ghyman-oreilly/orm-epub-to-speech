@@ -40,6 +40,7 @@ def convert_markdown_to_speech(markdown_file, output_dir, voice='alloy', split_a
 
         # Process each section
         for section_ix, (title, content) in enumerate(sections):
+
             section_audio = []
             
             # Clean the filename
@@ -52,7 +53,8 @@ def convert_markdown_to_speech(markdown_file, output_dir, voice='alloy', split_a
             chunked_content = split_content_into_chunks(content)
 
             for chunk_ix, chunk in enumerate(chunked_content):
-                
+                print(f"Processing section {section_ix + 1} of {len(sections)} (chunk {chunk_ix + 1} of {len(chunked_content)})...")
+
                 # Generate speech
                 response = client.audio.speech.create(
                     model="tts-1",

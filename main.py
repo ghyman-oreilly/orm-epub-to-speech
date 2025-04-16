@@ -45,6 +45,8 @@ def speak(markdown_file, output_dir, voice, split_at_subheadings):
         f"Converting {markdown_file} to speech using voice '{voice}'...")
     chunked_audio = convert_markdown_to_speech(markdown_file, temp_dir, voice, split_at_subheadings)
 
+    
+    click.echo("Merging and saving final audio files...")
     merged_audio = merge_audio_files(chunked_audio, output_dir)
 
     shutil.rmtree(temp_dir)
