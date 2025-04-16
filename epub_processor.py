@@ -70,6 +70,10 @@ def extract_epub_to_markdown(epub_path, output_file):
                 for element in soup(['script', 'style', 'table', 'figure', 'figcaption', 'pre']):
                     element.decompose()
 
+                # Remove footnote paragraphs
+                for element in soup.select('p[data-type="footnote"]'):
+                    element.decompose()
+
                 # Remove formatting tags but keep their content
                 for tag in soup.find_all(['strong', 'b', 'em', 'i', 'code']):
                     tag.replace_with(tag.get_text())
