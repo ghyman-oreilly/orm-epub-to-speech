@@ -84,10 +84,13 @@ def extract_epub_to_markdown(epub_path, output_file):
                     markdown_content.append(
                         f"\n## {chapter_title.get_text().strip()}\n")
 
+                # Get body element from the soup
+                body = soup.body
+
                 # Convert the HTML to markdown using markdownify library
                 # Configure markdownify to skip certain conversions
                 markdown_section = md(
-                    str(soup),
+                    str(body),
                     heading_style="ATX",
                     strip=['a', 'img', 'code', 'pre',
                            'table', 'tr', 'td', 'th', 'blockquote']
@@ -96,6 +99,8 @@ def extract_epub_to_markdown(epub_path, output_file):
                 # Ensure proper spacing between sections
                 markdown_content.append(f"\n{markdown_section}\n\n")
 
+        
+        
         # Clean up excessive newlines and spaces
         final_content = re.sub(r'\n{3,}', '\n\n', ''.join(markdown_content))
 
