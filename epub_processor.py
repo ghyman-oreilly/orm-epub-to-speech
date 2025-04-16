@@ -68,12 +68,6 @@ def extract_epub_to_markdown(epub_path, output_file):
                 for tag in soup.find_all(['strong', 'b', 'em', 'i', 'code']):
                     tag.replace_with(tag.get_text())
 
-                # Extract chapter title if available before converting to markdown
-                chapter_title = soup.find(['h1', 'h2'])
-                if chapter_title:
-                    markdown_content.append(
-                        f"\n## {chapter_title.get_text().strip()}\n")
-
                 # Get body element from the soup
                 body = soup.body
 
