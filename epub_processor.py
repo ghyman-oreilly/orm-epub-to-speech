@@ -20,12 +20,14 @@ def extract_epub_to_markdown(epub_path, output_file):
     try:
         # Read the EPUB file
         book = epub.read_epub(epub_path, {"ignore_ncx": True})
+        spine = book.spine # List of (idref, properties), indicating the correct order of epub contents 
 
         # Start building markdown content
         markdown_content = []
 
         # Process each document in the EPUB
-        for item in book.get_items():
+        for idref, _ in spine:
+            item = book.get_item_with_id(idref)
             if item.get_type() == ebooklib.ITEM_DOCUMENT:
                 # Get content as bytes and decode to string
                 html_content = item.get_content().decode('utf-8')
@@ -34,11 +36,11 @@ def extract_epub_to_markdown(epub_path, output_file):
                 soup = BeautifulSoup(html_content, 'html.parser')
 
                 # section classes to retain
-                chapter_level_section_classes = ['afterword', 'appendix', 'chapter', 'colophon','conclusion', 'foreword', 'introduction', 'preface', 'titlepage']
+                chapter_level_section_classes = ['afterword', 'appendix', 'chapter', 'colophon','conclusion', 'foreword', 'introduction', 'part', 'preface', 'titlepage']
 
                 # skip any chapter-level sections that we don't want to keep
                 try:
-                    if not soup.find("section").get('data-type') in chapter_level_section_classes:
+                    if not soup.select('section, div')[0].get('data-type') in chapter_level_section_classes:
                         continue
                 except:
                     continue
