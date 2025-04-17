@@ -20,6 +20,7 @@ This tool allows you to extract content from EPUB files and convert it to speech
 
 - Python 3.7+
 - OpenAI API key
+- ffmpeg or libav (used by pydub to edit/combine the MP3s)
 
 ### Setup
 
@@ -41,6 +42,13 @@ pip install -r requirements.txt
 ```bash
 echo "OPENAI_API_KEY=sk-your-api-key-here" > .env
 ```
+
+4. Install [ffmpeg](https://www.ffmpeg.org) or libav on your system. On mac, you can use brew to install ffmpeg:
+
+```bash
+brew install ffmpeg
+```
+
 
 ## Usage
 
@@ -99,6 +107,7 @@ python main.py process books/great_gatsby.epub --output-dir ./gatsby_audio --voi
 - markdown: Markdown processing
 - openai: OpenAI API client
 - python-dotenv: Environment variable management
+- ffmpeg or libav (non-python dependency): Crossplatform multimedia framework
 
 ## Limitations
 

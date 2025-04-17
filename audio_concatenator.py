@@ -2,9 +2,16 @@
 from pydub import AudioSegment
 import os
 import shutil
+import sys
 
+def check_for_audio_framework(temp_dir):
+    if not shutil.which("ffmpeg") and not shutil.which("libav"):
+        print("Required audio framework (ffmpeg or libav) not found. Unable to merge chunked audio files.")
+        print(f"Nonmerged audio files can be found at {temp_dir}")
+        print("Exiting.")
+        sys.exit(1)
 
-def merge_audio_files(chunked_audio_list, output_dir):
+def merge_audio_files(chunked_audio_list, output_dir, temp_dir):
     """
     Merge MP3 files from chunked_audio_list.
 
@@ -17,6 +24,8 @@ def merge_audio_files(chunked_audio_list, output_dir):
     """
     output = []
     
+    check_for_audio_framework(temp_dir)
+
     os.makedirs(output_dir, exist_ok=True)
     
     for section in chunked_audio_list:               

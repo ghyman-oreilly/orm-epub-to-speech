@@ -47,7 +47,7 @@ def speak(markdown_file, output_dir, voice, split_at_subheadings):
 
     
     click.echo("Merging and saving final audio files...")
-    merged_audio = merge_audio_files(chunked_audio, output_dir)
+    merged_audio = merge_audio_files(chunked_audio, output_dir, temp_dir)
 
     shutil.rmtree(temp_dir)
 
@@ -84,7 +84,8 @@ def process(epub_file, output_dir, voice, keep_markdown, split_at_subheadings):
 
     chunked_audio = convert_markdown_to_speech(md_filename, temp_dir, voice, split_at_subheadings)
 
-    merged_audio = merge_audio_files(chunked_audio, output_dir)
+    click.echo("Merging and saving final audio files...")
+    merged_audio = merge_audio_files(chunked_audio, output_dir, temp_dir)
 
     shutil.rmtree(temp_dir)
 
