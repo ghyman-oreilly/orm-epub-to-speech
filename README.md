@@ -62,6 +62,7 @@ python main.py extract path/to/book.epub --output book.md
 
 Options:
 - `--output`, `-o`: Output markdown filename (default: same as input with .md extension)
+- `--replace-stripped-elements-with-comments', '-c'`: When stripping out unwanted elements from the EPUB HTML (e.g., images, pre blocks, etc.), insert a comment where the elements have been removed.
 
 ### 2. Convert a Markdown file to speech
 

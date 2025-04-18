@@ -15,14 +15,19 @@ def cli():
 @cli.command()
 @click.argument('epub_file', type=click.Path(exists=True))
 @click.option('--output', '-o', default=None, help='Output markdown filename')
-def extract(epub_file, output):
+@click.option('--replace-stripped-elements-with-comments', '-c', is_flag=True, help='When stripping out unwanted elements from the EPUB HTML (e.g., images, pre blocks, etc.), insert a comment where the elements have been removed.')
+def extract(epub_file, output, replace_stripped_elements_with_comments):
     """Extract content from an EPUB file and save as markdown."""
     if output is None:
         # Use the EPUB filename but with .md extension
         output = os.path.splitext(os.path.basename(epub_file))[0] + '.md'
 
     click.echo(f"Extracting content from {epub_file} to {output}...")
-    result = extract_epub_to_markdown(epub_file, output)
+    result = extract_epub_to_markdown(epub_file, output, replace_stripped_elements_with_comments)
+    
+    if replace_stripped_elements_with_comments:
+        click.echo("IMPORTANT: Stripped elements converted to comments in the markdown. Please review and remove, as needed, before converting to audio.")
+    
     click.echo(f"Extraction complete: {result}")
 
 

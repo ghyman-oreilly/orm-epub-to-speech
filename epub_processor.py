@@ -1,11 +1,11 @@
 import ebooklib
 from ebooklib import epub
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Comment
 import re
 from markdownify import markdownify as md
 
 
-def extract_epub_to_markdown(epub_path, output_file):
+def extract_epub_to_markdown(epub_path, output_file, replace_stripped_elements_with_comments=False):
     """
     Process an EPUB file, extract content and headers, and save as markdown.
     Removes formatting elements like bold, italics, code blocks, figures, and tables.
@@ -13,6 +13,7 @@ def extract_epub_to_markdown(epub_path, output_file):
     Args:
         epub_path: Path to the EPUB file
         output_file: Path to save the markdown output
+        replace_stripped_elements_with_comments: if True, replace stripped elements with a comment
 
     Returns:
         str: Path to the created markdown file
@@ -58,9 +59,19 @@ def extract_epub_to_markdown(epub_path, output_file):
                     if level < 6:
                         tag.name = f"h{level + 1}"  # Promote to the next level
 
+                comment_placeholders = []
+
                 # Remove unwanted elements
-                for element in soup(['script', 'style', 'table', 'figure', 'figcaption', 'pre']):
-                    element.decompose()
+                for i, element in enumerate(soup(['script', 'style', 'table', 'figure', 'figcaption', 'pre'])):
+                    if replace_stripped_elements_with_comments:
+                        # replace with comment placeholder
+                        placeholder = f"HTML-COMMENT-{i}"
+                        comment = f"{element}"
+                        comment_placeholders.append((placeholder, comment))
+                        element.replace_with(placeholder)
+                    else:
+                        # simply remove
+                        element.decompose()
 
                 # Remove footnotes
                 for element in soup.select('p[data-type="footnote"], a[data-type="noteref"]'):
@@ -79,13 +90,16 @@ def extract_epub_to_markdown(epub_path, output_file):
                     str(body),
                     heading_style="ATX",
                     strip=['a', 'img', 'pre',
-                           'table', 'tr', 'td', 'th', 'blockquote']
+                            'table', 'tr', 'td', 'th', 'blockquote']
                 )
+
+                if replace_stripped_elements_with_comments:
+                    # replace placeholder with intended comment
+                    for placeholder, comment_text in comment_placeholders:
+                        markdown_section = markdown_section.replace(placeholder, f"<!--{comment_text}-->")
 
                 # Ensure proper spacing between sections
                 markdown_content.append(f"\n{markdown_section}\n\n")
-
-        
         
         # Clean up excessive newlines and spaces
         final_content = re.sub(r'\n{3,}', '\n\n', ''.join(markdown_content))
