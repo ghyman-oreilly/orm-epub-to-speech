@@ -36,6 +36,15 @@ def convert_markdown_to_speech(markdown_file, output_dir, voice='alloy', split_a
         # Initialize OpenAI client
         client = OpenAI()
 
+        # Instructions for model
+        instructions = """
+            Do not read aloud any of the following characters: #, *, _
+
+            Do not read aloud a backslash if it immediately precedes any of the following characters: #, *, _
+
+            Do not read aloud any HTML comments (wrapped in <!-- and -->).
+            """
+
         output = []
 
         # Process each section
@@ -59,7 +68,8 @@ def convert_markdown_to_speech(markdown_file, output_dir, voice='alloy', split_a
                 response = client.audio.speech.create(
                     model="tts-1",
                     voice=voice,
-                    input=chunk
+                    input=chunk,
+                    instructions=instructions
                 )
 
                 # Create a filename for this chunk
