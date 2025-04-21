@@ -2,9 +2,14 @@ import click
 import os
 import shutil
 import time
+import warnings
 from audio_concatenator import merge_audio_files
 from epub_processor import extract_epub_to_markdown
 from speech_generator import convert_markdown_to_speech
+
+# filter FutureWarnings from ebooklib\epub
+# warning that prompted adding the filter: ebooklib/epub.py:1423: FutureWarning: This search incorrectly ignores the root element, and will be fixed in a future version.  If you rely on the current behaviour, change it to './/xmlns:rootfile[@media-type]'
+warnings.filterwarnings("ignore", category=FutureWarning, module=r"^ebooklib\.epub$")
 
 @click.group()
 def cli():
