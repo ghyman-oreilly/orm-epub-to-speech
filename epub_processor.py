@@ -104,16 +104,9 @@ def extract_epub_to_markdown(epub_path, output_file, replace_stripped_elements_w
         # Clean up excessive newlines and spaces
         final_content = re.sub(r'\n{3,}', '\n\n', ''.join(markdown_content))
 
-        # Remove any remaining markdown formatting for bold and italic
-        final_content = re.sub(r'\*\*|\*|__|\^|_', '', final_content)
-
         # Add period to the end of headings that don't end with one
         # (to ensure model pause between heading and successive text)
         final_content = re.sub(r'^([#]+.*?[^\.])$', r'\1.', final_content, flags=re.MULTILINE)
-
-        # Remove any remaining code blocks
-        final_content = re.sub(
-            r'```.*?```', '', final_content, flags=re.DOTALL)
 
         # Write to file
         with open(output_file, 'w', encoding='utf-8') as f:
