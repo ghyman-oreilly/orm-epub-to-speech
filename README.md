@@ -62,7 +62,7 @@ python main.py extract path/to/book.epub --output book.md
 
 Options:
 - `--output`, `-o`: Output markdown filename (default: same as input with .md extension)
-- `--replace-stripped-elements-with-comments', '-c'`: When stripping out unwanted elements from the EPUB HTML (e.g., images, pre blocks, etc.), insert a comment where the elements have been removed.
+- `--replace-stripped-elements-with-comments', '-c'`: When stripping out unwanted elements from the EPUB HTML (e.g., images, pre blocks, etc.), insert a comment where the elements have been removed. Default is to simply remove the elements.
 
 ### 2. Convert a Markdown file to speech
 
@@ -85,6 +85,7 @@ Options:
 - `--output-dir`, `-o`: Directory for audio output files (default: ./audio_output)
 - `--voice`, `-v`: Voice to use (options: alloy, echo, fable, onyx, nova, shimmer)
 - `--keep-markdown`, `-k`: Keep the intermediate markdown file (default: removed after processing)
+- `--split-at-subheadings`, `-s`: Split audio files by subheadings (all H1 and H2) instead of the default of chapter-level audio files (H1)
 
 ## Example
 
