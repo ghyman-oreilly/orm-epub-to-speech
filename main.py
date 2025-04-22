@@ -5,6 +5,7 @@ import time
 import warnings
 from audio_concatenator import merge_audio_files
 from epub_processor import extract_epub_to_markdown
+from read_config import read_pronunciation_config
 from speech_generator import convert_markdown_to_speech
 
 # filter FutureWarnings from ebooklib\epub
@@ -41,7 +42,8 @@ def extract(epub_file, output, replace_stripped_elements_with_comments):
 @click.option('--output-dir', '-o', default='./audio_output', help='Output directory for audio files')
 @click.option('--voice', '-v', default='alloy', help='Voice to use (alloy, echo, fable, onyx, nova, shimmer)')
 @click.option('--split-at-subheadings', '-s', is_flag=True, help='Split audio content at H1 and H2 heading levels. If you do not pass this flag, content is split at H1 (chapter) level only.')
-def speak(markdown_file, output_dir, voice, split_at_subheadings):
+@click.option('--pronunciation-config-file', '-p', type=click.Path(exists=True), default=None, help='Path to optional config file containing term pronunciations. See sample-config.json for format.')
+def speak(markdown_file, output_dir, voice, split_at_subheadings, pronunciation_config_file):
     """Convert markdown content to speech using OpenAI's Text-to-Speech."""
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -51,11 +53,18 @@ def speak(markdown_file, output_dir, voice, split_at_subheadings):
     temp_dir = os.path.join(output_dir, f"temp_{int(time.time())}")
     os.makedirs(temp_dir, exist_ok=True)
 
+    if pronunciation_config_file is not None:
+        pronunciation_instructions = read_pronunciation_config(pronunciation_config_file)
+
     click.echo(
         f"Converting {markdown_file} to speech using voice '{voice}'...")
-    chunked_audio = convert_markdown_to_speech(markdown_file, temp_dir, voice, split_at_subheadings)
+    chunked_audio = convert_markdown_to_speech(
+        markdown_file, 
+        temp_dir, voice, 
+        split_at_subheadings,
+        pronunciation_instructions
+        )
 
-    
     click.echo("Merging and saving final audio files...")
     merged_audio = merge_audio_files(chunked_audio, output_dir, temp_dir)
 

@@ -11,7 +11,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def convert_markdown_to_speech(markdown_file, output_dir, voice='alloy', split_at_subheadings=False):
+def convert_markdown_to_speech(
+        markdown_file, 
+        output_dir, 
+        voice='alloy', 
+        split_at_subheadings=False,
+        pronunciation_instructions=None
+        ):
     """
     Convert markdown content to speech using OpenAI's Text-to-Speech API.
 
@@ -46,6 +52,12 @@ def convert_markdown_to_speech(markdown_file, output_dir, voice='alloy', split_a
 
             When a line begins with a number and a period (e.g., 1., 10., etc.), make sure to read the number aloud.
             """
+
+        if (
+            pronunciation_instructions is not None and 
+            isinstance(pronunciation_instructions, str)
+            ):
+            instructions = instructions + '\n\n' + pronunciation_instructions
 
         output = []
 
