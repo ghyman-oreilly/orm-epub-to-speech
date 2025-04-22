@@ -99,6 +99,7 @@ python main.py process books/great_gatsby.epub --output-dir ./gatsby_audio --voi
 - `main.py`: Command-line interface using Click
 - `epub_processor.py`: EPUB to Markdown conversion functions
 - `speech_generator.py`: Markdown to speech conversion using OpenAI API
+- `audio_concatenator.py`: Combines audio files that represent parts of a section
 - `requirements.txt`: List of required Python packages
 
 ## Dependencies
