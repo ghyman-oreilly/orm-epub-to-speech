@@ -43,6 +43,8 @@ def convert_markdown_to_speech(markdown_file, output_dir, voice='alloy', split_a
             Do not read aloud a backslash if it immediately precedes any of the following characters: #, *, _
 
             Do not read aloud any HTML comments (wrapped in <!-- and -->).
+
+            When a line begins with a number and a period (e.g., 1., 10., etc.), make sure to read the number aloud.
             """
 
         output = []
