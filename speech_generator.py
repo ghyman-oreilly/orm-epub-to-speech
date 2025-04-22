@@ -73,10 +73,10 @@ def convert_markdown_to_speech(markdown_file, output_dir, voice='alloy', split_a
                 )
 
                 # Create a filename for this chunk
-                filename = f"{(
+                filename = (
                     f'{file_basename}.mp3' if len(chunked_content) == 1 
                     else f'{file_basename}_pt{chunk_ix:02}.mp3'
-                )}"
+                )
                 output_path = os.path.join(output_dir, filename)
 
                 # Skip if file already exists
