@@ -5,20 +5,25 @@ from openai import OpenAI
 import markdown
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
-
+from google.cloud import texttospeech
+import sys
+import azure.cognitiveservices.speech as speechsdk
 
 # Load environment variables from .env file
 load_dotenv()
 
 
-def convert_markdown_to_speech(markdown_file, output_dir, voice='alloy', split_at_subheadings=False):
+def convert_markdown_to_speech(markdown_file, output_dir, service, voice, split_at_subheadings=False):
     """
-    Convert markdown content to speech using OpenAI's Text-to-Speech API.
+    Convert markdown content to speech using text-to-speech service.
 
     Args:
         markdown_file: Path to the markdown file
         output_dir: Directory to save the audio files
-        voice: Voice to use (alloy, echo, fable, onyx, nova, shimmer)
+        service: openai, google, or azure
+        voice: Voice to use (OpenAI: alloy, echo, fable, onyx, nova, shimmer; 
+          Google: en-US-Studio-O, en-US-Studio-Q;
+          Azure: cora, adam, nancy, emma, jane, jason, davis, samuel)
 
     Returns:
         List of lists of tuples:
@@ -33,10 +38,29 @@ def convert_markdown_to_speech(markdown_file, output_dir, voice='alloy', split_a
         # Split markdown into sections (chapters or major headings)
         sections = split_into_sections(markdown_content, split_at_subheadings)
 
-        # Initialize OpenAI client
-        client = OpenAI()
+        # Initialize client
+        if service == 'openai':
+            client = OpenAI()
+        elif service == 'google':
+            client = texttospeech.TextToSpeechClient()
+            voice = texttospeech.VoiceSelectionParams(
+                language_code="en-US", name='en-US-Neural2-G' # name=voice
+            )
+            audio_config = texttospeech.AudioConfig(
+                audio_encoding=texttospeech.AudioEncoding.MP3
+            )
+        elif service == 'azure':
+            speech_config = speechsdk.SpeechConfig(subscription=os.environ.get('SPEECH_KEY'), region=os.environ.get('SPEECH_REGION'))
+            speech_config.speech_synthesis_voice_name=voice
+            speech_config.set_speech_synthesis_output_format(
+                speechsdk.SpeechSynthesisOutputFormat.Audio16Khz32KBitRateMonoMp3
+            )
+            speech_synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=None)
+        else:
+            print("Invalid service. Exiting.")
+            sys.exit(1)
 
-        # Instructions for model
+        # Instructions for openai service
         instructions = """
             Do not read aloud any of the following characters: #, *, _, ®
 
@@ -67,12 +91,25 @@ def convert_markdown_to_speech(markdown_file, output_dir, voice='alloy', split_a
                 print(f"Processing section {section_ix + 1} of {len(sections)} (chunk {chunk_ix + 1} of {len(chunked_content)})...")
 
                 # Generate speech
-                response = client.audio.speech.create(
-                    model="tts-1",
-                    voice=voice,
-                    input=chunk,
-                    instructions=instructions
-                )
+                if service == 'google':
+                    # google
+                    text = texttospeech.SynthesisInput(text=chunk)
+                    response = client.synthesize_speech(
+                        input=text,
+                        voice=voice,
+                        audio_config=audio_config
+                    )
+                elif service == 'azure':
+                    # azure
+                    response = speech_synthesizer.speak_text_async(chunk).get()
+                else:
+                    # openai
+                    response = client.audio.speech.create(
+                        model="tts-1",
+                        voice=voice,
+                        input=chunk,
+                        instructions=instructions
+                    )
 
                 # Create a filename for this chunk
                 filename = (
@@ -87,7 +124,17 @@ def convert_markdown_to_speech(markdown_file, output_dir, voice='alloy', split_a
                     continue
 
                 # Save to file
-                response.stream_to_file(output_path)
+                if service == 'openai':
+                    response.stream_to_file(output_path)
+                elif service == 'google':
+                    # google
+                    with open(output_path, "wb") as f:
+                        f.write(response.audio_content)
+                else:
+                    # azure
+                    with open(output_path, "wb") as f:
+                        f.write(response.audio_data)
+                    
 
                 section_audio.append((chunk_ix, file_basename, output_path))
 

@@ -38,11 +38,12 @@ def extract(epub_file, output, replace_stripped_elements_with_comments):
 
 @cli.command()
 @click.argument('markdown_file', type=click.Path(exists=True))
+@click.option('--service', type=click.Choice(['openai', 'google', 'azure']), default='openai', help='Choose between OpenAI or Google TTS services (default: OpenAI)')
 @click.option('--output-dir', '-o', default='./audio_output', help='Output directory for audio files')
-@click.option('--voice', '-v', default='alloy', help='Voice to use (alloy, echo, fable, onyx, nova, shimmer)')
+@click.option('--voice', '-v', default=None, help='Voice to use (OpenAI: alloy, echo, fable, onyx, nova, shimmer; Google: female, male; Azure: cora, adam, nancy, emma, jane, jason, davis, samuel)')
 @click.option('--split-at-subheadings', '-s', is_flag=True, help='Split audio content at H1 and H2 heading levels. If you do not pass this flag, content is split at H1 (chapter) level only.')
-def speak(markdown_file, output_dir, voice, split_at_subheadings):
-    """Convert markdown content to speech using OpenAI's Text-to-Speech."""
+def speak(markdown_file, service, output_dir, voice, split_at_subheadings):
+    """Convert markdown content to speech using a text-to-speech service."""
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
         click.echo(f"Created output directory: {output_dir}")
@@ -51,10 +52,75 @@ def speak(markdown_file, output_dir, voice, split_at_subheadings):
     temp_dir = os.path.join(output_dir, f"temp_{int(time.time())}")
     os.makedirs(temp_dir, exist_ok=True)
 
-    click.echo(
-        f"Converting {markdown_file} to speech using voice '{voice}'...")
-    chunked_audio = convert_markdown_to_speech(markdown_file, temp_dir, voice, split_at_subheadings)
+    service = service.lower()
 
+    SERVICES = ['openai', 'google']
+    OPENAI_VOICES = ['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer']
+    GOOGLE_VOICES_MAPPING = {
+        "female": "en-US-Studio-O",
+        "male": "en-US-Studio-Q"
+    }
+    GOOGLE_VOICES = [k for k, _ in GOOGLE_VOICES_MAPPING.items()]
+    AZURE_VOICES_MAPPING = {
+        "cora": "en-US-CoraMultilingualNeural",
+        "adam": "en-US-AdamMultilingualNeural",
+        "nancy": "en-US-LewisMultilingualNeural",
+        "emma": "en-US-EmmaMultilingualNeural",
+        "jane": "en-US-JaneNeural",
+        "jason": "en-US-JasonNeural",
+        "davis": "en-US-DavisMultilingualNeural",
+        "samuel": "en-US-SamuelMultilingualNeural"
+    }
+    AZURE_VOICES = [k for k, _ in AZURE_VOICES_MAPPING.items()]
+    OPENAI_DEFAULT_VOICE = 'alloy'
+    GOOGLE_DEFAULT_VOICE = 'en-US-Studio-O'
+    AZURE_DEFAULT_VOICE = 'en-US-SamuelMultilingualNeural'
+
+    if service == 'openai':
+        valid_voices = OPENAI_VOICES
+    elif service == 'google':
+        valid_voices = GOOGLE_VOICES
+    elif service == 'azure':
+        valid_voices = AZURE_VOICES
+    else:
+        # invalid service
+        raise click.BadParameter(
+                f'Invalid service "{service}".'
+                f'Valid options are: {", ".join(SERVICES)}'
+            )
+
+    if voice is not None:
+        if voice not in valid_voices:
+            raise click.BadParameter(
+                f'Invalid voice "{voice}" for service "{service}". '
+                f'Valid options are: {", ".join(valid_voices)}'
+            )
+        elif service == 'google':
+            # look up actual voice name from menu option
+            voice = GOOGLE_VOICES_MAPPING.get(voice, GOOGLE_DEFAULT_VOICE)
+        elif service == 'azure':
+            # look up actual voice name from menu option
+            voice = AZURE_VOICES_MAPPING.get(voice, AZURE_DEFAULT_VOICE)
+    elif service == 'openai':
+        # default openai voice
+        voice = OPENAI_DEFAULT_VOICE
+    elif service == 'google':
+        # default google voice
+        voice = GOOGLE_DEFAULT_VOICE
+    else:
+        # default azure voice
+        voice = AZURE_DEFAULT_VOICE
+
+    modifier = ''
+
+    if service == 'google':
+        modifier = ' (' + next((k for k, v in GOOGLE_VOICES_MAPPING.items() if v == voice), '') + ')'
+    elif service == 'azure':
+        modifier = ' (' + next((k for k, v in AZURE_VOICES_MAPPING.items() if v == voice), '') + ')'
+
+    click.echo(
+        f"Converting {markdown_file} to speech using voice '{voice}'{modifier}...")
+    chunked_audio = convert_markdown_to_speech(markdown_file, temp_dir, service, voice, split_at_subheadings)
     
     click.echo("Merging and saving final audio files...")
     merged_audio = merge_audio_files(chunked_audio, output_dir, temp_dir)
