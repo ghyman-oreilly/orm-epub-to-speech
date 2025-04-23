@@ -38,7 +38,7 @@ def convert_markdown_to_speech(markdown_file, output_dir, voice='alloy', split_a
 
         # Instructions for model
         instructions = """
-            Do not read aloud any of the following characters: #, *, _
+            Do not read aloud any of the following characters: #, *, _, ®
 
             Do not read aloud a backslash if it immediately precedes any of the following characters: #, *, _
 
