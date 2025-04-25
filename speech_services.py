@@ -52,6 +52,7 @@ class GoogleSpeechService(SpeechService):
 class AzureSpeechService(SpeechService):
     def __init__(self, voice_name: str):
         import azure.cognitiveservices.speech as speechsdk
+        self.speechsdk = speechsdk
         speech_config = speechsdk.SpeechConfig(
             subscription=os.environ.get("SPEECH_KEY"),
             region=os.environ.get("SPEECH_REGION")
