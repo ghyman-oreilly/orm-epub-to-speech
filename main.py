@@ -5,7 +5,7 @@ import time
 import warnings
 from audio_concatenator import merge_audio_files
 from epub_processor import extract_epub_to_markdown
-from speech_generator import convert_markdown_to_speech
+from speech_generator import generate_speech_from_markdown
 
 # filter FutureWarnings from ebooklib\epub
 # warning that prompted adding the filter: ebooklib/epub.py:1423: FutureWarning: This search incorrectly ignores the root element, and will be fixed in a future version.  If you rely on the current behaviour, change it to './/xmlns:rootfile[@media-type]'
@@ -118,9 +118,19 @@ def speak(markdown_file, service, output_dir, voice, split_at_subheadings):
     elif service == 'azure':
         modifier = ' (' + next((k for k, v in AZURE_VOICES_MAPPING.items() if v == voice), '') + ')'
 
+    with open(markdown_file, 'r', encoding='utf-8') as f:
+        markdown_content = f.read()
+
+    instructions = """
+    Do not read aloud any of the following characters: #, *, _, ®
+    Do not read aloud a backslash if it immediately precedes any of the following characters: #, *, _
+    Do not read aloud any HTML comments (wrapped in <!-- and -->).
+    When a line begins with a number and a period (e.g., 1., 10., etc.), make sure to read the number aloud.
+    """
+
     click.echo(
         f"Converting {markdown_file} to speech using voice '{voice}'{modifier}...")
-    chunked_audio = convert_markdown_to_speech(markdown_file, temp_dir, service, voice, split_at_subheadings)
+    chunked_audio = generate_speech_from_markdown(markdown_content, temp_dir, service, voice, split_at_subheadings, instructions)
     
     click.echo("Merging and saving final audio files...")
     merged_audio = merge_audio_files(chunked_audio, output_dir, temp_dir)
@@ -158,7 +168,7 @@ def process(epub_file, output_dir, voice, keep_markdown, split_at_subheadings):
     temp_dir = os.path.join(output_dir, f"temp_{int(time.time())}")
     os.makedirs(temp_dir, exist_ok=True)
 
-    chunked_audio = convert_markdown_to_speech(md_filename, temp_dir, voice, split_at_subheadings)
+    chunked_audio = generate_speech_from_markdown(md_filename, temp_dir, voice, split_at_subheadings)
 
     click.echo("Merging and saving final audio files...")
     merged_audio = merge_audio_files(chunked_audio, output_dir, temp_dir)

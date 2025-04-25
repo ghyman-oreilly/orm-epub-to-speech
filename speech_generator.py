@@ -1,155 +1,109 @@
 import os
 import re
 import time
-from openai import OpenAI
 import markdown
 from bs4 import BeautifulSoup
-from dotenv import load_dotenv
-from google.cloud import texttospeech
-import sys
-import azure.cognitiveservices.speech as speechsdk
 
-# Load environment variables from .env file
-load_dotenv()
+from speech_services import OpenAISpeechService, GoogleSpeechService, AzureSpeechService
 
 
-def convert_markdown_to_speech(markdown_file, output_dir, service, voice, split_at_subheadings=False):
+def convert_markdown_chunk_to_ssml():
+    pass
+
+def check_chunk_size():
     """
-    Convert markdown content to speech using text-to-speech service.
+    Check number of characters in chunk.
+    If greater than 4096, we'll need to reduce the originating
+    markdown chunk size by the delta (by calling rechunk).
+    """
+    pass
+
+def rechunk():
+    """
+    Rechunk previously chunked markdown, with new max_size
+    determined by delta produced via `check_ssml_chunk_size`. 
+    
+    Actually, this can just call `chunk_markdown_section` with
+    an explicit `max_size` value passed.
+    """
+    pass
+
+
+
+def generate_speech_from_markdown(
+        markdown_content: str, 
+        output_dir: str, 
+        service: str, 
+        voice: str, 
+        split_at_subheadings: bool = False,
+        instructions: str = "",
+        use_ssml: bool = False
+    ):
+    """
+    Convert markdown content to speech using a pluggable TTS service.
 
     Args:
-        markdown_file: Path to the markdown file
+        markdown_file: Markdown text content
         output_dir: Directory to save the audio files
         service: openai, google, or azure
         voice: Voice to use (OpenAI: alloy, echo, fable, onyx, nova, shimmer; 
           Google: en-US-Studio-O, en-US-Studio-Q;
           Azure: cora, adam, nancy, emma, jane, jason, davis, samuel)
+        instructions: text string of instructions to include in call to OpenAI
+        use_ssml: If True, convert chunks to SSML and send to service (currently available for Azure)
 
     Returns:
         List of lists of tuples:
         - Each nested list represents a section
         - Each tuple is as: (chunk_index, file_basename, output_filename)
     """
-    try:
-        # Read markdown file
-        with open(markdown_file, 'r', encoding='utf-8') as f:
-            markdown_content = f.read()
+    sections = split_markdown_into_sections(markdown_content, split_at_subheadings)
 
-        # Split markdown into sections (chapters or major headings)
-        sections = split_into_sections(markdown_content, split_at_subheadings)
+    # Create the appropriate speech service
+    if service == 'openai':
+        speech_service = OpenAISpeechService(voice=voice, instructions=instructions)
+    elif service == 'google':
+        speech_service = GoogleSpeechService(voice_name=voice)
+    elif service == 'azure':
+        speech_service = AzureSpeechService(voice_name=voice)
+    else:
+        raise ValueError(f"Unsupported service '{service}'")
 
-        # Initialize client
-        if service == 'openai':
-            client = OpenAI()
-        elif service == 'google':
-            client = texttospeech.TextToSpeechClient()
-            voice = texttospeech.VoiceSelectionParams(
-                language_code="en-US", name='en-US-Neural2-G' # name=voice
+    output = []
+
+    for section_ix, (title, content) in enumerate(sections):
+        section_audio = []
+        safe_title = re.sub(r'[^\w\s-]', '', title.lower())
+        safe_title = re.sub(r'[\s]+', '_', safe_title)
+        file_basename = f"{section_ix+1:02d}_{safe_title[:30]}"
+        chunks = split_content_into_chunks(content)
+
+        for chunk_ix, chunk in enumerate(chunks):
+            print(f"Processing section {section_ix+1} (chunk {chunk_ix+1})...")
+            filename = (
+                f"{file_basename}.mp3" if len(chunks) == 1
+                else f"{file_basename}_pt{chunk_ix:02d}.mp3"
             )
-            audio_config = texttospeech.AudioConfig(
-                audio_encoding=texttospeech.AudioEncoding.MP3
-            )
-        elif service == 'azure':
-            speech_config = speechsdk.SpeechConfig(subscription=os.environ.get('SPEECH_KEY'), region=os.environ.get('SPEECH_REGION'))
-            speech_config.speech_synthesis_voice_name=voice
-            speech_config.set_speech_synthesis_output_format(
-                speechsdk.SpeechSynthesisOutputFormat.Audio16Khz32KBitRateMonoMp3
-            )
-            speech_synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=None)
-        else:
-            print("Invalid service. Exiting.")
-            sys.exit(1)
+            output_path = os.path.join(output_dir, filename)
 
-        # Instructions for openai service
-        instructions = """
-            Do not read aloud any of the following characters: #, *, _, ®
+            if os.path.exists(output_path):
+                print(f"Skipping existing file: {output_path}")
+                continue
 
-            Do not read aloud a backslash if it immediately precedes any of the following characters: #, *, _
+            audio_content = speech_service.synthesize_speech_from_text(chunk, output_path)
 
-            Do not read aloud any HTML comments (wrapped in <!-- and -->).
+            with open(output_path, "wb") as f:
+                f.write(audio_content)
 
-            When a line begins with a number and a period (e.g., 1., 10., etc.), make sure to read the number aloud.
-            """
+            section_audio.append((chunk_ix, file_basename, output_path))
 
-        output = []
+            time.sleep(1)
 
-        # Process each section
-        for section_ix, (title, content) in enumerate(sections):
+        output.append(section_audio)
 
-            section_audio = []
-            
-            # Clean the filename
-            safe_title = re.sub(r'[^\w\s-]', '', title.lower())
-            safe_title = re.sub(r'[\s]+', '_', safe_title)
+    return output
 
-            file_basename = f"{section_ix+1:02d}_{safe_title[:30]}"
-            
-            # chunk the content, to stay below char limit
-            chunked_content = split_content_into_chunks(content)
-
-            for chunk_ix, chunk in enumerate(chunked_content):
-                print(f"Processing section {section_ix + 1} of {len(sections)} (chunk {chunk_ix + 1} of {len(chunked_content)})...")
-
-                # Generate speech
-                if service == 'google':
-                    # google
-                    text = texttospeech.SynthesisInput(text=chunk)
-                    response = client.synthesize_speech(
-                        input=text,
-                        voice=voice,
-                        audio_config=audio_config
-                    )
-                elif service == 'azure':
-                    # azure
-                    response = speech_synthesizer.speak_text_async(chunk).get()
-                else:
-                    # openai
-                    response = client.audio.speech.create(
-                        model="tts-1",
-                        voice=voice,
-                        input=chunk,
-                        instructions=instructions
-                    )
-
-                # Create a filename for this chunk
-                filename = (
-                    f'{file_basename}.mp3' if len(chunked_content) == 1 
-                    else f'{file_basename}_pt{chunk_ix:02}.mp3'
-                )
-                output_path = os.path.join(output_dir, filename)
-
-                # Skip if file already exists
-                if os.path.exists(output_path):
-                    print(f"Skipping existing file: {output_path}")
-                    continue
-
-                # Save to file
-                if service == 'openai':
-                    response.stream_to_file(output_path)
-                elif service == 'google':
-                    # google
-                    with open(output_path, "wb") as f:
-                        f.write(response.audio_content)
-                else:
-                    # azure
-                    with open(output_path, "wb") as f:
-                        f.write(response.audio_data)
-                    
-
-                section_audio.append((chunk_ix, file_basename, output_path))
-
-                # Sleep to avoid hitting API rate limits
-                time.sleep(1)
-            
-            output.append(section_audio)
-
-        return output
-
-    except Exception as e:
-        return f"Error converting to speech: {str(e)}"
-
-
-def split_into_sections(markdown_content, split_at_subheadings=False):
+def split_markdown_into_sections(markdown_content, split_at_subheadings=False):
     """
     Split markdown content into sections based on headings.
 
