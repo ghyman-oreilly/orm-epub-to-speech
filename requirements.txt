@@ -1,3 +1,5 @@
+git+https://github.com/ghyman-oreilly/markdown-to-ssml-converter.git # companion markdown_to_ssml_converter package
+
 annotated-types==0.7.0
 anyio==4.9.0
 audioop-lts==0.2.1 ; python_version >= "3.13"

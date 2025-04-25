@@ -5,29 +5,8 @@ import markdown
 from bs4 import BeautifulSoup
 
 from speech_services import OpenAISpeechService, GoogleSpeechService, AzureSpeechService
-
-
-def convert_markdown_chunk_to_ssml():
-    pass
-
-def check_chunk_size():
-    """
-    Check number of characters in chunk.
-    If greater than 4096, we'll need to reduce the originating
-    markdown chunk size by the delta (by calling rechunk).
-    """
-    pass
-
-def rechunk():
-    """
-    Rechunk previously chunked markdown, with new max_size
-    determined by delta produced via `check_ssml_chunk_size`. 
-    
-    Actually, this can just call `chunk_markdown_section` with
-    an explicit `max_size` value passed.
-    """
-    pass
-
+from markdown_to_ssml_converter.converter import convert_markdown_to_ssml
+from markdown_to_ssml_converter.formatters import format_ssml_for_azure
 
 
 def generate_speech_from_markdown(
@@ -76,10 +55,14 @@ def generate_speech_from_markdown(
         safe_title = re.sub(r'[^\w\s-]', '', title.lower())
         safe_title = re.sub(r'[\s]+', '_', safe_title)
         file_basename = f"{section_ix+1:02d}_{safe_title[:30]}"
+        
         chunks = split_content_into_chunks(content)
 
+        if use_ssml and service == 'azure':
+            chunks = [format_ssml_for_azure(convert_markdown_to_ssml(chunk), voice=voice) for chunk in chunks]
+
         for chunk_ix, chunk in enumerate(chunks):
-            print(f"Processing section {section_ix+1} (chunk {chunk_ix+1})...")
+            print(f"Processing section {section_ix+1} of {len(sections)} (chunk {chunk_ix+1} of {len(chunks)})...")
             filename = (
                 f"{file_basename}.mp3" if len(chunks) == 1
                 else f"{file_basename}_pt{chunk_ix:02d}.mp3"
@@ -89,8 +72,11 @@ def generate_speech_from_markdown(
             if os.path.exists(output_path):
                 print(f"Skipping existing file: {output_path}")
                 continue
-
-            audio_content = speech_service.synthesize_speech_from_text(chunk, output_path)
+            
+            if use_ssml and service == 'azure':
+                audio_content = speech_service.synthesize_speech_from_ssml(chunk)
+            else:
+                audio_content = speech_service.synthesize_speech_from_text(chunk)
 
             with open(output_path, "wb") as f:
                 f.write(audio_content)
@@ -170,6 +156,14 @@ def split_content_into_chunks(content, max_chars=4096):
     """
     Chunk string of content to ensure we
     remain below character limit but retain all content.
+
+    OpenAI service calls are limited to text input of 4096 characters.
+    Azure real-time service calls are limited to voice output of 10 minutes.
+    (Azure batch synthesis API could be used if this becomes problematic.)
+    
+    Note: Do we need to look at whether this chunking could interfere
+    with speech markdown conventions? (Perhaps chunking by newline, where possible,
+    would be better.)
     """
     sentences = content.split('. ')
     chunks = []

@@ -4,6 +4,7 @@ import os
 import shutil
 import sys
 
+
 def check_for_audio_framework(temp_dir):
     if not shutil.which("ffmpeg") and not shutil.which("libav"):
         print("Required audio framework (ffmpeg or libav) not found. Unable to merge chunked audio files.")
@@ -49,13 +50,17 @@ def merge_audio_files(chunked_audio_list, output_dir, temp_dir):
 
         for _, _, filename in sorted_section:
             if os.path.exists(filename):
-                audio = AudioSegment.from_mp3(filename)
+                audio = AudioSegment.from_file(filename, format="mp3", parameters=["-hide_banner", "-loglevel", "error"])
                 merged_audio += audio
             else:
                 print(f"Warning: file not found — {filename}")
 
         # Export the merged audio
-        merged_audio.export(output_filename, format="mp3")
+        merged_audio.export(
+            output_filename,
+            format="mp3",
+            parameters=["-hide_banner", "-loglevel", "error"]
+        )
         output.append(output_filename)
 
     return output

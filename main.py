@@ -11,6 +11,7 @@ from speech_generator import generate_speech_from_markdown
 # warning that prompted adding the filter: ebooklib/epub.py:1423: FutureWarning: This search incorrectly ignores the root element, and will be fixed in a future version.  If you rely on the current behaviour, change it to './/xmlns:rootfile[@media-type]'
 warnings.filterwarnings("ignore", category=FutureWarning, module=r"^ebooklib\.epub$")
 
+
 @click.group()
 def cli():
     """EPUB Processing and Text-to-Speech Conversion Tool."""
@@ -42,7 +43,8 @@ def extract(epub_file, output, replace_stripped_elements_with_comments):
 @click.option('--output-dir', '-o', default='./audio_output', help='Output directory for audio files')
 @click.option('--voice', '-v', default=None, help='Voice to use (OpenAI: alloy, echo, fable, onyx, nova, shimmer; Google: female, male; Azure: cora, adam, nancy, emma, jane, jason, davis, samuel)')
 @click.option('--split-at-subheadings', '-s', is_flag=True, help='Split audio content at H1 and H2 heading levels. If you do not pass this flag, content is split at H1 (chapter) level only.')
-def speak(markdown_file, service, output_dir, voice, split_at_subheadings):
+@click.option('--use-ssml', '-u', is_flag=True, help='Convert chunked Markdown content to SSML before passing to TTS service. Compatible with Azure service only. Limited Speech Markdown conventions supported.')
+def speak(markdown_file, service, output_dir, voice, split_at_subheadings, use_ssml):
     """Convert markdown content to speech using a text-to-speech service."""
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -130,7 +132,7 @@ def speak(markdown_file, service, output_dir, voice, split_at_subheadings):
 
     click.echo(
         f"Converting {markdown_file} to speech using voice '{voice}'{modifier}...")
-    chunked_audio = generate_speech_from_markdown(markdown_content, temp_dir, service, voice, split_at_subheadings, instructions)
+    chunked_audio = generate_speech_from_markdown(markdown_content, temp_dir, service, voice, split_at_subheadings, instructions, use_ssml)
     
     click.echo("Merging and saving final audio files...")
     merged_audio = merge_audio_files(chunked_audio, output_dir, temp_dir)
